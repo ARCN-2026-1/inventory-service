@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  inventory-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # If running inside Docker network, we must connect to the services by name
+      - MYSQL_HOST=${MYSQL_HOST:-mysql}
+      - MYSQL_LOCAL_PORT=${MYSQL_LOCAL_PORT:-3306}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-customer_service}
+      - MYSQL_USER=${MYSQL_USER:-customer_app}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-change-me}
+      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+      - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      inventory-migration:
+        condition: service_completed_successfully
+
+  inventory-worker:
+    build: .
+    command: ["uv", "run", "python", "run_inventory_reservation_consumer.py"]
+    environment:
+      - MYSQL_HOST=${MYSQL_HOST:-mysql}
+      - MYSQL_LOCAL_PORT=${MYSQL_LOCAL_PORT:-3306}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-customer_service}
+      - MYSQL_USER=${MYSQL_USER:-customer_app}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-change-me}
+      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+      - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      inventory-migration:
+        condition: service_completed_successfully
+
+  inventory-migration:
+    build: .
+    command: ["uv", "run", "alembic", "upgrade", "head"]
+    environment:
+      - MYSQL_HOST=${MYSQL_HOST:-mysql}
+      - MYSQL_LOCAL_PORT=${MYSQL_LOCAL_PORT:-3306}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-customer_service}
+      - MYSQL_USER=${MYSQL_USER:-customer_app}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-change-me}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "${MYSQL_LOCAL_PORT:-3306}:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-change-me-root}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-customer_service}
+      - MYSQL_USER=${MYSQL_USER:-customer_app}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-change-me}
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_UI_PORT:-15672}:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+volumes:
+  mysql_data:
+  rabbitmq_data:
