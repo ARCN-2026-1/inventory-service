@@ -1,0 +1,84 @@
+# openspec/config.yaml
+schema: spec-driven
+
+context: |
+  Tech stack: Python 3.11, FastAPI, Pydantic v2, SQLAlchemy 2, uv (package manager)
+  Architecture: DDD hexagonal — domain/application/infrastructure/interfaces layers
+  Messaging: RabbitMQ via pika; domain events published on state changes
+  Testing: pytest + pytest-cov; testcontainers for integration; ruff + black + pyright for quality
+  Style: Conventional Commits with service scope; PRs target develop; branch pattern feature/<service>-<description>
+  Bounded context: inventory-service — habitaciones y disponibilidad (rooms and availability)
+  Part of hotel-ddd monorepo (ARCN-2026-1); standalone repo mirrors monorepo service skeleton
+
+strict_tdd: true
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Identify affected DDD layers (domain/application/infrastructure/interfaces)
+  specs:
+    - Use Given/When/Then format for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Respect bounded context — inventory owns rooms and availability only
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+    - Follow hexagonal layout: domain → application → infrastructure → interfaces
+  tasks:
+    - Group tasks by phase (domain, application, infrastructure, interfaces, tests)
+    - Use hierarchical numbering (1.1, 1.2, etc.)
+    - Keep tasks small enough to complete in one session
+  apply:
+    - Follow customer-service patterns as canonical reference
+    - Use dataclasses with slots=True for domain entities
+    - Raise DomainRuleViolation for invariant violations
+    - Load hotel-architecture-boundaries skill before moving code between layers
+    - Load hotel-code-quality skill before writing or refactoring code
+    - Load hotel-testing-convention skill when writing tests
+  verify:
+    - Run: uv run pytest --cov=internal --cov-report=term-missing
+    - Run: uv run ruff check . && uv run black --check . && uv run pyright
+    - Compare implementation against every spec scenario
+  archive:
+    - Warn before merging destructive deltas (large removals)
+    - Commit with: feat(inventory): <description>
+
+testing:
+  strict_tdd: true
+  detected: "2026-04-23"
+
+  test_runner:
+    command: "uv run pytest"
+    framework: pytest
+
+  layers:
+    unit:
+      available: true
+      tool: pytest
+      path: test/unit/
+    integration:
+      available: true
+      tool: "pytest + testcontainers.mysql.MySqlContainer"
+      path: test/integration/
+    contract:
+      available: true
+      tool: pytest
+      path: test/contract/
+    e2e:
+      available: false
+      tool: null
+
+  coverage:
+    available: true
+    command: "uv run pytest --cov=internal --cov-report=term-missing"
+
+  quality_tools:
+    linter:
+      available: true
+      command: "uv run ruff check ."
+    formatter:
+      available: true
+      command: "uv run black --check ."
+    type_checker:
+      available: true
+      command: "uv run pyright"
