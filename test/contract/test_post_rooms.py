@@ -15,6 +15,9 @@ class InMemoryRoomRepository:
     def get_by_room_number(self, room_number: str):
         return self.rooms_by_number.get(room_number)
 
+    def list_all(self):
+        return []
+
 
 def test_post_rooms_registers_room_without_auth() -> None:
     client = TestClient(create_app(repository=InMemoryRoomRepository()))

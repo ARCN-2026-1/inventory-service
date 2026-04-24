@@ -37,6 +37,9 @@ class InMemoryRoomRepository:
         self.rooms_by_number[room.room_number] = room
         self.saved_rooms.append(room)
 
+    def list_all(self) -> list[Room]:
+        return list(self.rooms_by_id.values())
+
 
 def test_patch_rooms_status_returns_204_for_valid_transition() -> None:
     room = _build_room(

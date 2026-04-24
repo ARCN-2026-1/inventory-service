@@ -47,6 +47,9 @@ class InMemoryRoomRepository:
     def save(self, room: Room) -> None:
         self.room_by_number[room.room_number] = room
 
+    def list_all(self) -> list[Room]:
+        return list(self.saved_rooms)
+
 
 def test_register_room_use_case_creates_room_and_returns_identifier() -> None:
     repository = InMemoryRoomRepository()

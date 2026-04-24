@@ -31,6 +31,9 @@ class SearchStubRepository:
     def save(self, room) -> None:
         raise AssertionError("search contract should not save rooms")
 
+    def list_all(self) -> list[Room]:
+        return []
+
     def search(
         self,
         *,
