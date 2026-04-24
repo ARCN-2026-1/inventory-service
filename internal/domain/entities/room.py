@@ -92,6 +92,8 @@ class Room:
 
     def reserve(self, *, booking_id: UUID, reserved_at: datetime) -> None:
         availability = self._require_availability()
+        if availability.booking_id == booking_id:
+            return
         if availability.booking_id is not None:
             raise DomainRuleViolation(f"Room {self.room_number} is already reserved")
 

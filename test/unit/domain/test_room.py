@@ -129,6 +129,36 @@ def test_room_reserve_rejects_when_room_is_already_reserved() -> None:
         )
 
 
+def test_room_reserve_is_idempotent_for_same_booking() -> None:
+    room = Room.register(
+        room_id=UUID("f5e8d26e-f86a-49ff-babf-f036bd43a73c"),
+        room_number="402A",
+        room_type=RoomType.STANDARD,
+        capacity=2,
+        price_amount=Decimal("160.00"),
+        price_currency="USD",
+        operational_status=RoomOperationalStatus.AVAILABLE,
+        registered_at=datetime(2026, 4, 23, tzinfo=timezone.utc),
+        availability_start=date(2026, 4, 24),
+        availability_end=date(2026, 4, 29),
+    )
+    booking_id = UUID("e32f8d11-a5f4-449b-971d-c15ea56822ab")
+    room.reserve(
+        booking_id=booking_id,
+        reserved_at=datetime(2026, 4, 24, 10, 0, tzinfo=timezone.utc),
+    )
+    room.pull_domain_events()
+
+    room.reserve(
+        booking_id=booking_id,
+        reserved_at=datetime(2026, 4, 24, 11, 0, tzinfo=timezone.utc),
+    )
+
+    assert room.availability is not None
+    assert room.availability.booking_id == booking_id
+    assert room.pull_domain_events() == []
+
+
 def test_room_release_clears_booking_id_and_emits_event() -> None:
     room = Room.register(
         room_id=UUID("3d1adcc3-5340-47bf-a8a5-2b90c75d3480"),

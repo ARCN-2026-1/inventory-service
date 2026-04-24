@@ -1,0 +1,111 @@
+services:
+  inventory-migration:
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-inventory_service}
+      MYSQL_USER: ${MYSQL_USER:-inventory_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-inventory_app_local}
+      MYSQL_LOCAL_PORT: ${MYSQL_LOCAL_PORT:-3306}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+
+  inventory-api:
+    depends_on:
+      inventory-migration:
+        condition: service_completed_successfully
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-inventory_service}
+      MYSQL_USER: ${MYSQL_USER:-inventory_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-inventory_app_local}
+      MYSQL_LOCAL_PORT: ${MYSQL_LOCAL_PORT:-3306}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      INVENTORY_SERVICE_RABBITMQ_EXCHANGE: ${INVENTORY_SERVICE_RABBITMQ_EXCHANGE:-inventory.direct}
+      INVENTORY_SERVICE_RABBITMQ_REQUEST_QUEUE: ${INVENTORY_SERVICE_RABBITMQ_REQUEST_QUEUE:-inventory.request.queue}
+      INVENTORY_SERVICE_RABBITMQ_RESPONSE_QUEUE: ${INVENTORY_SERVICE_RABBITMQ_RESPONSE_QUEUE:-inventory.response.queue}
+      INVENTORY_SERVICE_RABBITMQ_REQUEST_ROUTING_KEY: ${INVENTORY_SERVICE_RABBITMQ_REQUEST_ROUTING_KEY:-inventory.request}
+      INVENTORY_SERVICE_RABBITMQ_RESPONSE_ROUTING_KEY: ${INVENTORY_SERVICE_RABBITMQ_RESPONSE_ROUTING_KEY:-inventory.response.key}
+    ports:
+      - "${INVENTORY_SERVICE_PORT:-8000}:8000"
+
+  inventory-worker:
+    depends_on:
+      inventory-migration:
+        condition: service_completed_successfully
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-inventory_service}
+      MYSQL_USER: ${MYSQL_USER:-inventory_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-inventory_app_local}
+      MYSQL_LOCAL_PORT: ${MYSQL_LOCAL_PORT:-3306}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      INVENTORY_SERVICE_RABBITMQ_EXCHANGE: ${INVENTORY_SERVICE_RABBITMQ_EXCHANGE:-inventory.direct}
+      INVENTORY_SERVICE_RABBITMQ_REQUEST_QUEUE: ${INVENTORY_SERVICE_RABBITMQ_REQUEST_QUEUE:-inventory.request.queue}
+      INVENTORY_SERVICE_RABBITMQ_RESPONSE_QUEUE: ${INVENTORY_SERVICE_RABBITMQ_RESPONSE_QUEUE:-inventory.response.queue}
+      INVENTORY_SERVICE_RABBITMQ_REQUEST_ROUTING_KEY: ${INVENTORY_SERVICE_RABBITMQ_REQUEST_ROUTING_KEY:-inventory.request}
+      INVENTORY_SERVICE_RABBITMQ_RESPONSE_ROUTING_KEY: ${INVENTORY_SERVICE_RABBITMQ_RESPONSE_ROUTING_KEY:-inventory.response.key}
+
+  mysql:
+    image: mysql:8.4
+    container_name: inventory-service-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_local}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-inventory_service}
+      MYSQL_USER: ${MYSQL_USER:-inventory_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-inventory_app_local}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    ports:
+      - "${MYSQL_LOCAL_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-proot_local"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: inventory-service-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_UI_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+  rabbitmq-data:

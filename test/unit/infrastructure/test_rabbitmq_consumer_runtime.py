@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sys
 from datetime import datetime, timezone
 from typing import cast
@@ -12,7 +13,9 @@ from internal.infrastructure.messaging.rabbitmq_inventory_reservation_consumer i
     RabbitMqInventoryReservationConsumer,
 )
 from internal.interfaces.messaging.contracts import InventoryResponseMessage
-from internal.interfaces.messaging.inventory_reservation_consumer import HandlingResult
+from internal.interfaces.messaging.inventory_reservation_consumer import (
+    HandlingResult,
+)
 
 
 class FakeHandler:
@@ -239,6 +242,79 @@ def test_consumer_nacks_when_response_publish_is_not_confirmed() -> None:
     assert connection.closed is True
 
 
+def test_consumer_logs_ack_decision_on_invalid_message(
+    caplog,
+) -> None:
+    connection = FakeConnection()
+    consumer = RabbitMqInventoryReservationConsumer(
+        connection_factory=lambda: connection,
+        exchange_name="inventory.direct",
+        request_queue="inventory.request.queue",
+        response_queue="inventory.response.queue",
+        request_routing_key="inventory.request",
+        response_routing_key="inventory.response.key",
+        handler=FakeHandler(
+            HandlingResult(
+                should_ack=True,
+                requeue=False,
+                response_event=None,
+            )
+        ),
+        properties_factory=lambda event_type: {"type": event_type},
+    )
+    caplog.set_level(logging.INFO)
+
+    outcome = consumer.process_message(b"{not-json}", delivery_tag=70)
+
+    assert outcome == {"acked": True, "requeue": False, "published": False}
+    assert "Discarding inventory worker message due to invalid JSON" in caplog.text
+    assert "Inventory ack decision=ack requeue=false delivery_tag=70" in caplog.text
+
+
+def test_consumer_uses_runtime_channel_for_ack_without_opening_new_connection() -> None:
+    runtime_channel = FakeChannel()
+
+    def _unexpected_connection_factory() -> FakeConnection:
+        raise AssertionError("connection factory should not be called")
+
+    consumer = RabbitMqInventoryReservationConsumer(
+        connection_factory=_unexpected_connection_factory,
+        exchange_name="inventory.direct",
+        request_queue="inventory.request.queue",
+        response_queue="inventory.response.queue",
+        request_routing_key="inventory.request",
+        response_routing_key="inventory.response.key",
+        handler=FakeHandler(
+            HandlingResult(
+                should_ack=True,
+                requeue=False,
+                response_event=None,
+            )
+        ),
+        properties_factory=lambda event_type: {"type": event_type},
+    )
+
+    outcome = consumer.process_message(
+        json.dumps(
+            {
+                "eventId": "38f4ee99-b032-45f3-8190-605492ed1ef0",
+                "eventType": "BOOKING_Ok",
+                "timestamp": "2026-04-24T12:00:00+00:00",
+                "bookingId": "6b08d13c-f5d7-43c8-9d74-7db5b8d8a2f4",
+                "customerId": "fba06311-3720-4d85-9089-475479d9365c",
+                "startDate": "2026-04-25",
+                "endDate": "2026-04-28",
+                "roomIds": ["3f0a4cf8-e5df-4d46-8f17-77e7323db6d7"],
+            }
+        ).encode("utf-8"),
+        delivery_tag=71,
+        channel=runtime_channel,
+    )
+
+    assert outcome == {"acked": True, "requeue": False, "published": False}
+    assert runtime_channel.acks == [71]
+
+
 def test_open_rabbitmq_connection_passes_url_parameters_to_pika(
     monkeypatch,
 ) -> None:
@@ -295,3 +371,17 @@ def test_build_consumer_uses_inventory_settings_for_rabbitmq_topology(
     assert consumer.response_queue == "inventory.response.queue"
     assert consumer.request_routing_key == "inventory.request"
     assert consumer.response_routing_key == "inventory.response.key"
+
+
+def test_configure_logging_sets_info_level_for_worker_runtime(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_basic_config(**kwargs: object) -> None:
+        captured.update(kwargs)
+
+    monkeypatch.setattr(runtime_module.logging, "basicConfig", fake_basic_config)
+
+    runtime_module.configure_logging()
+
+    assert captured["level"] == logging.INFO
+    assert captured["format"] == "%(asctime)s %(levelname)s %(name)s %(message)s"

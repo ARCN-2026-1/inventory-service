@@ -5,6 +5,7 @@ RUN pip install uv
 
 # Set the working directory
 WORKDIR /app
+ENV PYTHONPATH=/app
 
 # Copy dependency files first to leverage Docker layer caching
 COPY pyproject.toml uv.lock ./
