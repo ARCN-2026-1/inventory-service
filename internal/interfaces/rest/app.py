@@ -16,6 +16,7 @@ from internal.application.errors import (
     DuplicateRoomNumberError,
     RoomNotFoundError,
 )
+from internal.application.queries.get_room_by_id_use_case import GetRoomByIdUseCase
 from internal.application.queries.search_rooms_query import SearchRoomsQuery
 from internal.application.queries.search_rooms_use_case import SearchRoomsUseCase
 from internal.application.usecases.register_room import RegisterRoomUseCase
@@ -30,6 +31,7 @@ from internal.interfaces.rest.schemas import (
     ErrorResponse,
     RegisterRoomRequest,
     RegisterRoomResponse,
+    RoomDetailResponse,
     RoomSummary,
     SearchRoomsResponse,
     UpdateRoomStatusRequest,
@@ -109,6 +111,49 @@ def create_app(
         Health check endpoint to verify that the service is running correctly.
         """
         return Response(status_code=status.HTTP_200_OK)
+
+    @app.get(
+        "/rooms/{room_id}",
+        status_code=status.HTTP_200_OK,
+        response_model=RoomDetailResponse,
+        response_model_by_alias=True,
+        tags=["Rooms"],
+        summary="Get room by ID",
+        response_description="The room matching the provided ID.",
+        responses={404: {"model": ErrorResponse}},
+    )
+    def get_room_by_id(
+        room_id: Annotated[
+            UUID,
+            Path(description="The UUID of the room to retrieve."),
+        ],
+    ) -> RoomDetailResponse:
+        room = GetRoomByIdUseCase(app.state.room_repository).execute(room_id)
+        return RoomDetailResponse(
+            room_id=str(room.room_id),
+            room_number=room.room_number,
+            room_type=room.room_type.value,
+            capacity=room.capacity,
+            price_amount=room.base_price.amount,
+            price_currency=room.base_price.currency,
+            operational_status=room.operational_status.value,
+            availability_start=(
+                None
+                if room.availability is None
+                else room.availability.date_range.start_date
+            ),
+            availability_end=(
+                None
+                if room.availability is None
+                else room.availability.date_range.end_date
+            ),
+            booking_id=(
+                None
+                if room.availability is None or room.availability.booking_id is None
+                else str(room.availability.booking_id)
+            ),
+            registered_at=room.registered_at,
+        )
 
     @app.post(
         "/rooms",

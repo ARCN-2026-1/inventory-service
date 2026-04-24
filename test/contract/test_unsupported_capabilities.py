@@ -30,9 +30,11 @@ def test_openapi_contract_exposes_only_bootstrap_http_capabilities() -> None:
     assert set(response.json()["paths"]) == {
         "/health",
         "/rooms",
+        "/rooms/{room_id}",
         "/rooms/{room_id}/status",
     }
     assert set(response.json()["paths"]["/rooms"]) == {"get", "post"}
+    assert set(response.json()["paths"]["/rooms/{room_id}"]) == {"get"}
     assert set(response.json()["paths"]["/rooms/{room_id}/status"]) == {"patch"}
 
 

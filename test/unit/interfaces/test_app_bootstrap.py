@@ -24,19 +24,33 @@ def test_create_app_registers_room_routes_and_uses_provided_repository() -> None
     application = create_app(repository=repository)
 
     openapi_paths = application.openapi()["paths"]
+    routes = {
+        "/health",
+        "/rooms",
+        "/rooms/{room_id}",
+        "/rooms/{room_id}/status",
+    }
 
-    assert set(openapi_paths) == {"/health", "/rooms", "/rooms/{room_id}/status"}
+    assert set(openapi_paths) == routes
     assert set(openapi_paths["/health"]) == {"get"}
     assert set(openapi_paths["/rooms"]) == {"get", "post"}
+    assert set(openapi_paths["/rooms/{room_id}"]) == {"get"}
     assert set(openapi_paths["/rooms/{room_id}/status"]) == {"patch"}
     assert application.state.room_repository is repository
 
 
 def test_main_exposes_bootstrap_http_contract_without_rabbitmq_hooks() -> None:
     openapi_paths = app.openapi()["paths"]
+    routes = {
+        "/health",
+        "/rooms",
+        "/rooms/{room_id}",
+        "/rooms/{room_id}/status",
+    }
 
-    assert set(openapi_paths) == {"/health", "/rooms", "/rooms/{room_id}/status"}
+    assert set(openapi_paths) == routes
     assert set(openapi_paths["/rooms"]) == {"get", "post"}
+    assert set(openapi_paths["/rooms/{room_id}"]) == {"get"}
     assert set(openapi_paths["/rooms/{room_id}/status"]) == {"patch"}
     assert app.router.on_startup == []
     assert app.router.on_shutdown == []

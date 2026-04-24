@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -62,8 +62,7 @@ class RegisterRoomRequest(CamelCaseModel):
 class RegisterRoomResponse(CamelCaseModel):
     room_id: str = Field(
         description=(
-            "Universally Unique Identifier (UUID) assigned to the newly created "
-            "room."
+            "Universally Unique Identifier (UUID) assigned to the newly created room."
         ),
         examples=["1fcdc9c0-26d9-4e9f-b80a-3dca3a2fe6c7"],
     )
@@ -100,6 +99,32 @@ class RoomSummary(CamelCaseModel):
     price_currency: str = Field(
         description="Three-letter ISO 4217 currency code.",
         examples=["USD"],
+    )
+
+
+class RoomDetailResponse(RoomSummary):
+    operational_status: str = Field(
+        description="Current operational status of the room.",
+        examples=["AVAILABLE"],
+    )
+    availability_start: date | None = Field(
+        default=None,
+        description="Configured availability start date for the room.",
+        examples=["2026-04-24"],
+    )
+    availability_end: date | None = Field(
+        default=None,
+        description="Configured availability end date for the room.",
+        examples=["2026-04-26"],
+    )
+    booking_id: str | None = Field(
+        default=None,
+        description="Booking UUID currently assigned to the room, if reserved.",
+        examples=["1fcdc9c0-26d9-4e9f-b80a-3dca3a2fe6c7"],
+    )
+    registered_at: datetime = Field(
+        description="Timestamp when the room was registered.",
+        examples=["2026-04-24T12:00:00Z"],
     )
 
 
