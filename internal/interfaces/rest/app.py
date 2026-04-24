@@ -7,6 +7,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import FastAPI, Path, Query, Request, Response, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from internal.application.commands.register_room import RegisterRoomCommand
@@ -39,6 +40,11 @@ from internal.interfaces.rest.schemas import (
 )
 
 logger = logging.getLogger(__name__)
+
+ALLOWED_CORS_ORIGINS = [
+    "http://20.116.218.234:80",
+    "http://localhost:5173",
+]
 
 
 def _configure_logging() -> None:
@@ -96,6 +102,13 @@ def create_app(
         resolved_repository = SqlAlchemyRoomRepository(session_factory)
 
     app = FastAPI(title="Hotel DDD Inventory Service API", version="0.1.0")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=ALLOWED_CORS_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     _register_exception_handlers(app)
     app.state.room_repository = resolved_repository
 
