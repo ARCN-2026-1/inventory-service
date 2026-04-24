@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime, timezone
 from decimal import Decimal
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import FastAPI, Path, Query, Request, Response, status
@@ -151,14 +152,30 @@ def create_app(
         responses={400: {"model": ErrorResponse}},
     )
     def search_rooms(
-        check_in: date = Query(..., description="The check-in date for the search period."),
-        check_out: date = Query(..., description="The check-out date for the search period."),
-        room_type: str | None = Query(default=None, description="Filter by a specific room type (e.g., STANDARD)."),
-        max_price: Decimal | None = Query(default=None, description="Maximum price per night."),
-        min_capacity: int | None = Query(default=None, description="Minimum number of occupants the room must accommodate."),
+        check_in: Annotated[
+            date,
+            Query(description="The check-in date for the search period."),
+        ],
+        check_out: Annotated[
+            date,
+            Query(description="The check-out date for the search period."),
+        ],
+        room_type: Annotated[
+            str | None,
+            Query(description="Filter by a specific room type (e.g., STANDARD)."),
+        ] = None,
+        max_price: Annotated[
+            Decimal | None,
+            Query(description="Maximum price per night."),
+        ] = None,
+        min_capacity: Annotated[
+            int | None,
+            Query(description="Minimum number of occupants the room must accommodate."),
+        ] = None,
     ) -> SearchRoomsResponse:
         """
-        Retrieves a list of rooms that are available between the specified check-in and check-out dates.
+        Retrieves a list of rooms that are available between the specified
+        check-in and check-out dates.
 
         Optional filters include room type, maximum price, and minimum capacity.
         """
@@ -190,12 +207,17 @@ def create_app(
         status_code=status.HTTP_204_NO_CONTENT,
         tags=["Rooms"],
         summary="Update room operational status",
-        response_description="Successfully updated the room status (no content returned).",
+        response_description=(
+            "Successfully updated the room status (no content returned)."
+        ),
         responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}},
     )
     def update_room_status(
         payload: UpdateRoomStatusRequest,
-        room_id: UUID = Path(..., description="The UUID of the room to update."),
+        room_id: Annotated[
+            UUID,
+            Path(description="The UUID of the room to update."),
+        ],
     ) -> Response:
         """
         Updates the operational status of an existing room.
