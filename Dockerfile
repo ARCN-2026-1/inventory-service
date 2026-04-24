@@ -1,26 +1,19 @@
 FROM python:3.11-slim
 
-# Install uv for fast dependency resolution and installation
-RUN pip install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Set the working directory
+ENV UV_SYSTEM_PYTHON=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
-ENV PYTHONPATH=/app
 
-# Copy dependency files first to leverage Docker layer caching
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies into a local .venv (uv sync handles this)
-RUN uv sync --frozen --no-install-project --no-dev
+RUN uv sync --frozen --no-cache --no-dev
 
-# Copy application source code
 COPY . .
 
-# Install the project itself
-RUN uv sync --frozen --no-dev
-
-# Expose the API port
 EXPOSE 8000
 
-# Command to run the FastAPI server by default
 CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

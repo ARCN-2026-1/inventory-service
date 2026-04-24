@@ -1,55 +1,26 @@
-x-inventory-runtime: &inventory-runtime
-  image: ${INVENTORY_SERVICE_IMAGE:-inventory-service:latest}
-  build:
-    context: .
-  environment:
-    PYTHONPATH: /app
-    INVENTORY_SERVICE_DATABASE_URL: ${INVENTORY_SERVICE_DATABASE_URL:-}
-    MYSQL_HOST: ${MYSQL_HOST:?set MYSQL_HOST}
-    MYSQL_LOCAL_PORT: ${MYSQL_LOCAL_PORT:-3306}
-    MYSQL_DATABASE: ${MYSQL_DATABASE:?set MYSQL_DATABASE}
-    MYSQL_USER: ${MYSQL_USER:?set MYSQL_USER}
-    MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD}
-    INVENTORY_SERVICE_RABBITMQ_URL: ${INVENTORY_SERVICE_RABBITMQ_URL:-}
-    RABBITMQ_HOST: ${RABBITMQ_HOST:?set RABBITMQ_HOST}
-    RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
-    RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:?set RABBITMQ_DEFAULT_USER}
-    RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?set RABBITMQ_DEFAULT_PASS}
-    INVENTORY_SERVICE_RABBITMQ_EXCHANGE: ${INVENTORY_SERVICE_RABBITMQ_EXCHANGE:-inventory.direct}
-    INVENTORY_SERVICE_RABBITMQ_REQUEST_QUEUE: ${INVENTORY_SERVICE_RABBITMQ_REQUEST_QUEUE:-inventory.request.queue}
-    INVENTORY_SERVICE_RABBITMQ_RESPONSE_QUEUE: ${INVENTORY_SERVICE_RABBITMQ_RESPONSE_QUEUE:-inventory.response.queue}
-    INVENTORY_SERVICE_RABBITMQ_REQUEST_ROUTING_KEY: ${INVENTORY_SERVICE_RABBITMQ_REQUEST_ROUTING_KEY:-inventory.request}
-    INVENTORY_SERVICE_RABBITMQ_RESPONSE_ROUTING_KEY: ${INVENTORY_SERVICE_RABBITMQ_RESPONSE_ROUTING_KEY:-inventory.response.key}
+version: '3.8'
 
 services:
-  inventory-migration:
-    <<: *inventory-runtime
-    command: ["uv", "run", "alembic", "upgrade", "head"]
-    restart: "no"
-
   inventory-api:
-    <<: *inventory-runtime
-    depends_on:
-      inventory-migration:
-        condition: service_completed_successfully
+    build: .
+    container_name: inventory-api
     ports:
-      - "${INVENTORY_SERVICE_PORT:-8000}:8000"
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status == 200 else 1)\"",
-        ]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-    restart: unless-stopped
+      - "8000:8000"
+    env_file:
+      - .env
+    restart: always
 
   inventory-worker:
-    <<: *inventory-runtime
+    build: .
+    container_name: inventory-worker
     command: ["uv", "run", "python", "run_inventory_reservation_consumer.py"]
-    depends_on:
-      inventory-migration:
-        condition: service_completed_successfully
-    restart: unless-stopped
+    env_file:
+      - .env
+    restart: always
+
+  inventory-migration:
+    build: .
+    container_name: inventory-migration
+    command: ["uv", "run", "alembic", "upgrade", "head"]
+    env_file:
+      - .env
