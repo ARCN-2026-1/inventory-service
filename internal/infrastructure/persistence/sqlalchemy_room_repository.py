@@ -123,6 +123,16 @@ class SqlAlchemyRoomRepository:
                 )
             session.commit()
 
+    def list_all(self) -> list[Room]:
+        with self._session_factory() as session:
+            models = (
+                session.query(RoomModel)
+                .options(joinedload(RoomModel.availability))
+                .order_by(RoomModel.room_number.asc())
+                .all()
+            )
+            return [self._to_domain(model) for model in models]
+
     def _to_model(self, room: Room) -> RoomModel:
         model = RoomModel(
             room_id=str(room.room_id),

@@ -16,6 +16,7 @@ from internal.application.errors import (
     DuplicateRoomNumberError,
     RoomNotFoundError,
 )
+from internal.application.queries.get_all_rooms_use_case import GetAllRoomsUseCase
 from internal.application.queries.search_rooms_query import SearchRoomsQuery
 from internal.application.queries.search_rooms_use_case import SearchRoomsUseCase
 from internal.application.usecases.register_room import RegisterRoomUseCase
@@ -109,6 +110,36 @@ def create_app(
         Health check endpoint to verify that the service is running correctly.
         """
         return Response(status_code=status.HTTP_200_OK)
+
+    @app.get(
+        "/rooms/all",
+        status_code=status.HTTP_200_OK,
+        response_model=SearchRoomsResponse,
+        response_model_by_alias=True,
+        tags=["Rooms"],
+        summary="Get all rooms without filters",
+        response_description="A list of all rooms in the inventory.",
+        responses={400: {"model": ErrorResponse}},
+    )
+    def get_all_rooms() -> SearchRoomsResponse:
+        """
+        Retrieves a list of all rooms in the inventory system,
+        without any availability filters.
+        """
+        rooms = GetAllRoomsUseCase(app.state.room_repository).execute()
+        return SearchRoomsResponse(
+            rooms=[
+                RoomSummary(
+                    room_id=room.room_id,
+                    room_number=room.room_number,
+                    room_type=room.room_type,
+                    capacity=room.capacity,
+                    price_amount=room.price_amount,
+                    price_currency=room.price_currency,
+                )
+                for room in rooms
+            ]
+        )
 
     @app.post(
         "/rooms",
