@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from internal.application.usecases.release_rooms import ReleaseRoomsUseCase
 from internal.application.usecases.reserve_rooms import ReserveRoomsUseCase
 from internal.infrastructure.config.settings import InventoryServiceSettings
@@ -13,6 +15,15 @@ from internal.infrastructure.persistence.sqlalchemy_room_repository import (
 from internal.interfaces.messaging.inventory_reservation_consumer import (
     InventoryReservationHandler,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def configure_logging() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
 
 
 def open_rabbitmq_connection(url: str):
@@ -49,6 +60,7 @@ def build_consumer(
 
 
 def main() -> None:
+    configure_logging()
     consumer = build_consumer()
     connection = consumer._connection_factory()
     channel = connection.channel()
@@ -56,7 +68,20 @@ def main() -> None:
 
     def on_message(channel, method, properties, body):
         del properties
-        consumer.process_message(body, delivery_tag=method.delivery_tag)
+        logger.info(
+            "Inventory runtime received message delivery_tag=%s",
+            method.delivery_tag,
+        )
+        outcome = consumer.process_message(
+            body,
+            delivery_tag=method.delivery_tag,
+            channel=channel,
+        )
+        logger.info(
+            "Inventory runtime processed message delivery_tag=%s outcome=%s",
+            method.delivery_tag,
+            outcome,
+        )
 
     channel.basic_consume(
         queue=InventoryServiceSettings().rabbitmq_queue_inventory_request,
