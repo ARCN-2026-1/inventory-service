@@ -5,6 +5,5 @@ __pycache__/
 .venv/
 htmlcov/
 .env
-!.env.example
-!.env.deploy
+.env.*
 !.env.example
