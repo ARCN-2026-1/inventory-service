@@ -83,7 +83,8 @@ class RabbitMqInventoryReservationConsumer:
                 _body_preview(body),
             )
 
-            if not channel.is_open:
+            channel_is_open = getattr(channel, "is_open", None)
+            if channel_is_open is False:
                 logger.error(
                     "Channel is not open delivery_tag=%s",
                     delivery_tag,
