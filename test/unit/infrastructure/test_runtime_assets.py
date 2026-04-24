@@ -51,21 +51,6 @@ def test_compose_dev_overlay_includes_local_mysql_and_rabbitmq() -> None:
     assert "RABBITMQ_HOST: rabbitmq" in compose_dev
 
 
-def test_env_local_and_deploy_files_document_distinct_runtime_contracts() -> None:
-    env_local = (PROJECT_ROOT / ".env.local").read_text(encoding="utf-8")
-    env_deploy = (PROJECT_ROOT / ".env.deploy").read_text(encoding="utf-8")
-
-    assert "MYSQL_HOST=mysql" in env_local
-    assert "RABBITMQ_HOST=rabbitmq" in env_local
-    assert "INVENTORY_SERVICE_PORT=8000" in env_local
-    assert "INVENTORY_SERVICE_RABBITMQ_EXCHANGE=inventory.direct" in env_local
-
-    assert "MYSQL_HOST=" in env_deploy
-    assert "RABBITMQ_HOST=" in env_deploy
-    assert "INVENTORY_SERVICE_PORT=" in env_deploy
-    assert "INVENTORY_SERVICE_RABBITMQ_EXCHANGE=inventory.direct" in env_deploy
-
-
 def test_readme_includes_bootstrap_startup_steps() -> None:
     readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
 

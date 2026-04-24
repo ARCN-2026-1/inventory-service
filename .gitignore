@@ -7,5 +7,3 @@ htmlcov/
 .env
 .env.*
 !.env.example
-!.env.local
-!.env.deploy

@@ -13,6 +13,7 @@ from internal.interfaces.messaging.inventory_reservation_consumer import (
 )
 
 logger = logging.getLogger(__name__)
+logger.propagate = True
 
 
 class MessageHandlerProtocol(Protocol):
@@ -81,6 +82,16 @@ class RabbitMqInventoryReservationConsumer:
                 delivery_tag,
                 _body_preview(body),
             )
+
+            channel_is_open = getattr(channel, "is_open", None)
+            if channel_is_open is False:
+                logger.error(
+                    "Channel is not open delivery_tag=%s",
+                    delivery_tag,
+                )
+                channel.basic_nack(delivery_tag=delivery_tag, requeue=True)
+                return {"acked": False, "requeue": True, "published": False}
+
             try:
                 payload = json.loads(body.decode("utf-8"))
             except (UnicodeDecodeError, json.JSONDecodeError):

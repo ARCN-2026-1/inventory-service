@@ -112,7 +112,7 @@ class SearchRoomsResponse(CamelCaseModel):
 class ErrorResponse(CamelCaseModel):
     detail: str = Field(
         description=(
-            "A human-readable explanation specific to the occurrence of the " "problem."
+            "A human-readable explanation specific to the occurrence of the problem."
         ),
         examples=["Room with number 101 already exists."],
     )
