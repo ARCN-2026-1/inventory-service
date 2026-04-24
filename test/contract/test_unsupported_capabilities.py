@@ -20,6 +20,9 @@ class StubRepository:
     def search(self, **kwargs):
         return []
 
+    def list_all(self):
+        return []
+
 
 def test_openapi_contract_exposes_only_bootstrap_http_capabilities() -> None:
     client = TestClient(create_app(repository=StubRepository()))
@@ -30,9 +33,11 @@ def test_openapi_contract_exposes_only_bootstrap_http_capabilities() -> None:
     assert set(response.json()["paths"]) == {
         "/health",
         "/rooms",
+        "/rooms/all",
         "/rooms/{room_id}/status",
     }
     assert set(response.json()["paths"]["/rooms"]) == {"get", "post"}
+    assert set(response.json()["paths"]["/rooms/all"]) == {"get"}
     assert set(response.json()["paths"]["/rooms/{room_id}/status"]) == {"patch"}
 
 

@@ -338,6 +338,9 @@ class _NoOpRepository:
     def save(self, room: Room) -> None:
         del room
 
+    def list_all(self) -> list[Room]:
+        return []
+
 
 class _FakeAckChannel:
     def __init__(self) -> None:

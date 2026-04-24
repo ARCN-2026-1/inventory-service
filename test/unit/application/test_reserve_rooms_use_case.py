@@ -44,6 +44,9 @@ class InMemoryRoomRepository:
         self.rooms_by_id[room.room_id] = room
         self.saved_rooms.append(room)
 
+    def list_all(self) -> list[Room]:
+        return list(self.rooms_by_id.values())
+
 
 def test_reserve_rooms_use_case_confirms_reservation_for_all_available_rooms() -> None:
     room = _build_room(

@@ -56,6 +56,9 @@ class SearchSpyRoomRepository:
         )
         return self.rooms
 
+    def list_all(self) -> list[Room]:
+        return list(self.rooms)
+
 
 def test_search_rooms_use_case_builds_date_range_and_maps_room_summaries() -> None:
     repository = SearchSpyRoomRepository(

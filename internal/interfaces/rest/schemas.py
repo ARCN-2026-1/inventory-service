@@ -62,8 +62,7 @@ class RegisterRoomRequest(CamelCaseModel):
 class RegisterRoomResponse(CamelCaseModel):
     room_id: str = Field(
         description=(
-            "Universally Unique Identifier (UUID) assigned to the newly created "
-            "room."
+            "Universally Unique Identifier (UUID) assigned to the newly created room."
         ),
         examples=["1fcdc9c0-26d9-4e9f-b80a-3dca3a2fe6c7"],
     )
