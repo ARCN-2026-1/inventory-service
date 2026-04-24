@@ -1,32 +1,71 @@
 # inventory-service
 
-Bootstrap inventory service for hotel-ddd with FastAPI, SQLAlchemy, MySQL, and Alembic.
+Inventory bounded context for hotel-ddd using FastAPI, SQLAlchemy, MySQL and RabbitMQ.
 
 ## Documentation
 
-For a comprehensive overview of the service's responsibilities, event-driven architecture, API endpoints, and message contracts, please see the [Service Overview](docs/service_overview.md).
+- [Service Overview](docs/service_overview.md)
 
-## Local setup
+## Structure
 
-1. Install dependencies:
+- `docker-compose.yml` — deploy/runtime base (`inventory-migration`, `inventory-api`, `inventory-worker`)
+- `docker-compose.dev.yml` — local overlay with MySQL + RabbitMQ
+- `.env.local` — local dev profile for compose base + dev overlay
+- `.env.deploy` — deploy profile for external infra
+- `.env.example` — safe template for both profiles
 
-   ```bash
-   uv sync
-   ```
+## Local setup (without Docker)
 
-2. Configure environment variables from `.env.example`.
+```bash
+uv sync
+uv run alembic upgrade head
+uv run fastapi dev main.py
+```
 
-3. Run migrations:
+## Docker convention
 
-   ```bash
-   uv run alembic upgrade head
-   ```
+### Deploy / runtime base (external infra)
 
-4. Start the API locally:
+`docker-compose.yml` is runtime-oriented and does **not** provision local MySQL/RabbitMQ.
 
-   ```bash
-   uv run fastapi dev main.py
-   ```
+Run with deploy env profile:
+
+```bash
+docker compose --env-file .env.deploy -f docker-compose.yml up -d
+```
+
+### Local development (runtime + local infra)
+
+Use compose layering:
+
+- `docker-compose.yml` (runtime services)
+- `docker-compose.dev.yml` (mysql/rabbitmq + local overrides)
+
+Start:
+
+```bash
+docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.dev.yml up -d
+```
+
+Stop:
+
+```bash
+docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.dev.yml down
+```
+
+## Runtime env contract
+
+Runtime services (`inventory-migration`, `inventory-api`, `inventory-worker`) resolve these vars explicitly:
+
+- MySQL: `MYSQL_HOST`, `MYSQL_LOCAL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`
+- RabbitMQ connection: `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_DEFAULT_USER`, `RABBITMQ_DEFAULT_PASS`
+- Optional URLs: `INVENTORY_SERVICE_DATABASE_URL`, `INVENTORY_SERVICE_RABBITMQ_URL`
+- RabbitMQ topology contract:
+  - `INVENTORY_SERVICE_RABBITMQ_EXCHANGE`
+  - `INVENTORY_SERVICE_RABBITMQ_REQUEST_QUEUE`
+  - `INVENTORY_SERVICE_RABBITMQ_RESPONSE_QUEUE`
+  - `INVENTORY_SERVICE_RABBITMQ_REQUEST_ROUTING_KEY`
+  - `INVENTORY_SERVICE_RABBITMQ_RESPONSE_ROUTING_KEY`
 
 ## Available endpoints
 
