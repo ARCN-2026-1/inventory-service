@@ -82,6 +82,15 @@ class RabbitMqInventoryReservationConsumer:
                 delivery_tag,
                 _body_preview(body),
             )
+
+            if not channel.is_open:
+                logger.error(
+                    "Channel is not open delivery_tag=%s",
+                    delivery_tag,
+                )
+                channel.basic_nack(delivery_tag=delivery_tag, requeue=True)
+                return {"acked": False, "requeue": True, "published": False}
+
             try:
                 payload = json.loads(body.decode("utf-8"))
             except (UnicodeDecodeError, json.JSONDecodeError):
