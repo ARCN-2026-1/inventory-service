@@ -13,6 +13,7 @@ from internal.interfaces.messaging.inventory_reservation_consumer import (
 )
 
 logger = logging.getLogger(__name__)
+logger.propagate = True
 
 
 class MessageHandlerProtocol(Protocol):

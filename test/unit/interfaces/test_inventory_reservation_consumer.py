@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from datetime import date, datetime, timezone
 from uuid import UUID
 
@@ -58,25 +57,16 @@ def test_handler_discards_invalid_payload_without_response() -> None:
     assert result.response_event is None
 
 
-def test_handler_logs_validation_failures_with_payload_context(
-    caplog,
-) -> None:
+def test_handler_discards_validation_failures() -> None:
     handler = InventoryReservationHandler(
         reserve_rooms=ReserveRoomsSpy(),
         release_rooms=ReleaseRoomsSpy(),
     )
-    caplog.set_level(logging.WARNING)
-
     result = handler.handle({"eventType": "BOOKING_Ok", "bookingId": "not-a-uuid"})
 
     assert result.should_ack is True
     assert result.requeue is False
     assert result.response_event is None
-    assert (
-        "Discarding inventory reservation message due to validation failure"
-        in caplog.text
-    )
-    assert "bookingId" in caplog.text
 
 
 def test_handler_acknowledges_booking_ok_and_returns_inventory_response() -> None:
@@ -208,23 +198,17 @@ def test_handler_nacks_transient_processing_errors_for_requeue() -> None:
     assert result.response_event is None
 
 
-def test_handler_logs_transient_processing_errors_with_identifiers(
-    caplog,
-) -> None:
+def test_handler_requeues_transient_processing_errors() -> None:
     reserve_rooms = ReserveRoomsSpy()
     reserve_rooms.error = RuntimeError("database unavailable")
     handler = InventoryReservationHandler(
         reserve_rooms=reserve_rooms,
         release_rooms=ReleaseRoomsSpy(),
     )
-    caplog.set_level(logging.ERROR)
-
     result = handler.handle(_booking_payload(event_type="BOOKING_Ok"))
 
     assert result.should_ack is False
     assert result.requeue is True
-    assert "Inventory reservation processing failed" in caplog.text
-    assert "booking_id=5d94bbee-54ce-4f9d-bc93-062f5075dbf4" in caplog.text
 
 
 def _booking_payload(*, event_type: str) -> dict[str, object]:

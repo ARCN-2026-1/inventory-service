@@ -15,6 +15,7 @@ from internal.interfaces.messaging.contracts import (
 )
 
 logger = logging.getLogger(__name__)
+logger.propagate = True
 
 
 class ReserveRoomsExecutor(Protocol):

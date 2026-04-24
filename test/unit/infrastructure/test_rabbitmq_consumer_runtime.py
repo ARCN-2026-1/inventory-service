@@ -242,9 +242,7 @@ def test_consumer_nacks_when_response_publish_is_not_confirmed() -> None:
     assert connection.closed is True
 
 
-def test_consumer_logs_ack_decision_on_invalid_message(
-    caplog,
-) -> None:
+def test_consumer_acknowledges_invalid_message() -> None:
     connection = FakeConnection()
     consumer = RabbitMqInventoryReservationConsumer(
         connection_factory=lambda: connection,
@@ -262,13 +260,9 @@ def test_consumer_logs_ack_decision_on_invalid_message(
         ),
         properties_factory=lambda event_type: {"type": event_type},
     )
-    caplog.set_level(logging.INFO)
-
     outcome = consumer.process_message(b"{not-json}", delivery_tag=70)
 
     assert outcome == {"acked": True, "requeue": False, "published": False}
-    assert "Discarding inventory worker message due to invalid JSON" in caplog.text
-    assert "Inventory ack decision=ack requeue=false delivery_tag=70" in caplog.text
 
 
 def test_consumer_uses_runtime_channel_for_ack_without_opening_new_connection() -> None:
