@@ -18,6 +18,9 @@ class StubRepository:
     def search(self, **kwargs):
         raise AssertionError("bootstrap test should not search rooms")
 
+    def list_all(self):
+        raise AssertionError("bootstrap test should not list rooms")
+
 
 def test_create_app_registers_room_routes_and_uses_provided_repository() -> None:
     repository = StubRepository()
@@ -27,6 +30,7 @@ def test_create_app_registers_room_routes_and_uses_provided_repository() -> None
     routes = {
         "/health",
         "/rooms",
+        "/rooms/all",
         "/rooms/{room_id}",
         "/rooms/{room_id}/status",
     }
@@ -34,6 +38,7 @@ def test_create_app_registers_room_routes_and_uses_provided_repository() -> None
     assert set(openapi_paths) == routes
     assert set(openapi_paths["/health"]) == {"get"}
     assert set(openapi_paths["/rooms"]) == {"get", "post"}
+    assert set(openapi_paths["/rooms/all"]) == {"get"}
     assert set(openapi_paths["/rooms/{room_id}"]) == {"get"}
     assert set(openapi_paths["/rooms/{room_id}/status"]) == {"patch"}
     assert application.state.room_repository is repository
@@ -44,12 +49,14 @@ def test_main_exposes_bootstrap_http_contract_without_rabbitmq_hooks() -> None:
     routes = {
         "/health",
         "/rooms",
+        "/rooms/all",
         "/rooms/{room_id}",
         "/rooms/{room_id}/status",
     }
 
     assert set(openapi_paths) == routes
     assert set(openapi_paths["/rooms"]) == {"get", "post"}
+    assert set(openapi_paths["/rooms/all"]) == {"get"}
     assert set(openapi_paths["/rooms/{room_id}"]) == {"get"}
     assert set(openapi_paths["/rooms/{room_id}/status"]) == {"patch"}
     assert app.router.on_startup == []

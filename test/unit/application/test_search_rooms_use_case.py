@@ -36,6 +36,9 @@ class SearchSpyRoomRepository:
     def save(self, room: Room) -> None:
         return None
 
+    def list_all(self) -> list[Room]:
+        return list(self.rooms)
+
     def search(
         self,
         *,

@@ -44,6 +44,9 @@ class InMemoryRoomRepository:
         self.rooms_by_id[room.room_id] = room
         self.saved_rooms.append(room)
 
+    def list_all(self) -> list[Room]:
+        return list(self.rooms_by_id.values())
+
 
 def test_release_rooms_use_case_releases_rooms_reserved_for_booking() -> None:
     booking_id = UUID("4732dc8e-ff34-4957-8cd0-64dc3a462fc2")
